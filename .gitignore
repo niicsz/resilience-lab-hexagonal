@@ -1,0 +1,7 @@
+.claude/
+.idea/
+
+docs/
+CLAUDE.md
+
+target/

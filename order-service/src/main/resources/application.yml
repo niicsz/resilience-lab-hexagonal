@@ -1,0 +1,78 @@
+spring:
+  application:
+    name: order-service
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/${DB_NAME:orders}
+    username: ${DB_USER:orders}
+    password: ${DB_PASSWORD:orders}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+
+server:
+  tomcat:
+    threads:
+      max: 25
+      min-spare: 5
+
+clients:
+  payment:
+    base-url: ${PAYMENT_BASE_URL:http://localhost:8081}
+  inventory:
+    base-url: ${INVENTORY_BASE_URL:http://localhost:8081}
+  notification:
+    base-url: ${NOTIFICATION_BASE_URL:http://localhost:8081}
+  tracking:
+    base-url: ${TRACKING_BASE_URL:http://localhost:8081}
+
+resilience:
+  payment:
+    timeout:
+      enabled: ${RESILIENCE_PAYMENT_TIMEOUT_ENABLED:true}
+      duration: 800ms
+    circuitbreaker:
+      enabled: ${RESILIENCE_PAYMENT_CIRCUITBREAKER_ENABLED:true}
+      sliding-window-size: 20
+      failure-rate-threshold: 50
+      wait-duration-open: 10s
+      permitted-calls-half-open: 3
+    retry:
+      enabled: ${RESILIENCE_PAYMENT_RETRY_ENABLED:true}
+      max-attempts: 3
+      wait-duration: 200ms
+      multiplier: 2.0
+      jitter: 0.5
+    reconciliation:
+      fixed-delay: 10000
+  inventory:
+    retry:
+      enabled: ${RESILIENCE_INVENTORY_RETRY_ENABLED:true}
+      max-attempts: 3
+      wait-duration: 200ms
+      multiplier: 2.0
+      jitter: 0.5
+  tracking:
+    bulkhead:
+      enabled: ${RESILIENCE_TRACKING_BULKHEAD_ENABLED:true}
+      core-size: 4
+      max-size: 4
+      queue-capacity: 2
+  notification:
+    fallback:
+      enabled: ${RESILIENCE_NOTIFICATION_FALLBACK_ENABLED:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  tracing:
+    sampling:
+      probability: 1.0
