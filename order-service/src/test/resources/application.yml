@@ -1,0 +1,27 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+
+clients:
+  payment:
+    base-url: http://localhost:8081
+  inventory:
+    base-url: http://localhost:8081
+  notification:
+    base-url: http://localhost:8081
+  tracking:
+    base-url: http://localhost:8081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
