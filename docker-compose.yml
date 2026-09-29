@@ -1,0 +1,81 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: orders
+      MYSQL_USER: orders
+      MYSQL_PASSWORD: orders
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  wiremock:
+    image: wiremock/wiremock:3.13.2
+    command: ["--global-response-templating", "--verbose"]
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./wiremock:/home/wiremock
+
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
+      wiremock:
+        condition: service_started
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: orders
+      DB_USER: orders
+      DB_PASSWORD: orders
+      INVENTORY_BASE_URL: http://wiremock:8080
+      PAYMENT_BASE_URL: http://wiremock:8080
+      NOTIFICATION_BASE_URL: http://wiremock:8080
+      TRACKING_BASE_URL: http://wiremock:8080
+      RESILIENCE_PAYMENT_TIMEOUT_ENABLED: ${RESILIENCE_PAYMENT_TIMEOUT_ENABLED:-true}
+      RESILIENCE_PAYMENT_CIRCUITBREAKER_ENABLED: ${RESILIENCE_PAYMENT_CIRCUITBREAKER_ENABLED:-true}
+      RESILIENCE_PAYMENT_RETRY_ENABLED: ${RESILIENCE_PAYMENT_RETRY_ENABLED:-true}
+      RESILIENCE_INVENTORY_RETRY_ENABLED: ${RESILIENCE_INVENTORY_RETRY_ENABLED:-true}
+      RESILIENCE_TRACKING_BULKHEAD_ENABLED: ${RESILIENCE_TRACKING_BULKHEAD_ENABLED:-true}
+      RESILIENCE_NOTIFICATION_FALLBACK_ENABLED: ${RESILIENCE_NOTIFICATION_FALLBACK_ENABLED:-true}
+    ports:
+      - "8080:8080"
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-remote-write-receiver
+      - --web.enable-lifecycle
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - order-service
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_USERS_DEFAULT_THEME: dark
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus

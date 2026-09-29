@@ -1,0 +1,13 @@
+{
+  "request": { "method": "GET", "urlPathPattern": "/tracking/.*" },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "orderPublicId": "unknown",
+      "carrier": "ACME",
+      "trackingCode": "XYZ123",
+      "state": "IN_TRANSIT"
+    }
+  }
+}
